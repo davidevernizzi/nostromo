@@ -9,8 +9,8 @@ Python 3 (pre-installed on macOS and most Linux distros).
 ## Usage
 
 ```
-python3 pomodoro.py [--work N] [--break N] <project> <task>
-python3 pomodoro.py [--work N] [--break N] <task>
+python3 nostromo.py [--work N] [--break N] <project> <task>
+python3 nostromo.py [--work N] [--break N] <task>
 ```
 
 If only a task is provided, the last used project is reused automatically.
@@ -20,27 +20,27 @@ If only a task is provided, the last used project is reused automatically.
 Start a session with a project and task (25 min work / 5 min break):
 
 ```bash
-python3 pomodoro.py "my-app" "implement login page"
+python3 nostromo.py "my-app" "implement login page"
 ```
 
 Continue on the same project — just pass the task:
 
 ```bash
-python3 pomodoro.py "fix auth redirect bug"
+python3 nostromo.py "fix auth redirect bug"
 ```
 
 Custom durations (50 min work / 10 min break):
 
 ```bash
-python3 pomodoro.py --work 50 --break 10 "my-app" "refactor database layer"
+python3 nostromo.py --work 50 --break 10 "my-app" "refactor database layer"
 ```
 
 ## Optional: run as a command
 
 ```bash
-chmod +x pomodoro.py
-cp pomodoro.py /usr/local/bin/pomodoro
-pomodoro "my-app" "write tests"
+chmod +x nostromo.py
+cp nostromo.py /usr/local/bin/nostromo
+nostromo "my-app" "write tests"
 ```
 
 ## Report
@@ -48,20 +48,20 @@ pomodoro "my-app" "write tests"
 Generate a report of time spent:
 
 ```
-python3 pomodoro.py report [interval] [--from DATE] [--to DATE] [--project LIST]
+python3 nostromo.py report [interval] [--from DATE] [--to DATE] [--project LIST]
 ```
 
 Predefined intervals: `today` (default), `yesterday`, `this-week`, `last-week`, `this-month`, `last-month`.
 
 ```bash
 # Today's sessions
-python3 pomodoro.py report
+python3 nostromo.py report
 
 # This week, filtered to one project
-python3 pomodoro.py report this-week --project my-app
+python3 nostromo.py report this-week --project my-app
 
 # Custom date range, multiple projects
-python3 pomodoro.py report --from 2026-03-01 --to 2026-03-15 --project my-app,other-project
+python3 nostromo.py report --from 2026-03-01 --to 2026-03-15 --project my-app,other-project
 ```
 
 Output includes per-project totals, a daily breakdown (for multi-day ranges), and a full task list.
