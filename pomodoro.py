@@ -59,18 +59,33 @@ def run_timer(seconds, label):
     added_sec = 0
     tick = 0.05  # seconds per loop iteration
 
-    def _print_status(remaining):
+    BAR_WIDTH = 20
+    HINTS = "p:pause  s:stop  c:cancel  a:+5m"
+
+    def _print_status():
+        fraction = min(elapsed / total, 1.0) if total > 0 else 0.0
+        filled = round(fraction * BAR_WIDTH)
+        bar = "█" * filled + "░" * (BAR_WIDTH - filled)
+        remaining = max(total - elapsed, 0)
         mm, ss = divmod(int(remaining), 60)
-        sys.stdout.write(f"\r{label}: {mm:02d}:{ss:02d} remaining  [p]ause  [s]top  [c]ancel  [a]dd 5m  ")
+        lbl = label[:5].ljust(6)
+        line = f"{lbl}[{bar}] {mm:02d}:{ss:02d}"
+        sys.stdout.write(f"\r{line:<35}")
         sys.stdout.flush()
 
     if not interactive:
-        # Non-interactive fallback: original blocking loop
-        for remaining in range(seconds, 0, -1):
+        for elapsed_s in range(0, seconds + 1):
+            fraction = min(elapsed_s / seconds, 1.0) if seconds > 0 else 1.0
+            filled = round(fraction * BAR_WIDTH)
+            bar = "█" * filled + "░" * (BAR_WIDTH - filled)
+            remaining = max(seconds - elapsed_s, 0)
             mm, ss = divmod(remaining, 60)
-            sys.stdout.write(f"\r{label}: {mm:02d}:{ss:02d} remaining  ")
+            lbl = label[:5].ljust(6)
+            line = f"{lbl}[{bar}] {mm:02d}:{ss:02d}"
+            sys.stdout.write(f"\r{line:<35}")
             sys.stdout.flush()
-            time.sleep(1)
+            if elapsed_s < seconds:
+                time.sleep(1)
         sys.stdout.write("\n\a")
         sys.stdout.flush()
         return {"outcome": "completed", "elapsed_sec": seconds, "paused_sec": 0, "added_sec": 0}
@@ -79,16 +94,17 @@ def run_timer(seconds, label):
     old_settings = termios.tcgetattr(sys.stdin)
     try:
         tty.setraw(sys.stdin)
+        sys.stdout.write(f"{HINTS}\n")
+        sys.stdout.flush()
 
         while elapsed < total:
-            remaining = total - elapsed
-            _print_status(remaining)
+            _print_status()
 
             key = _read_key(tick)
 
             if key == "p":
                 pause_start = time.monotonic()
-                sys.stdout.write("\nPaused — press p to resume  ")
+                sys.stdout.write(f"\r{'  ⏸  Paused — p to resume':<35}")
                 sys.stdout.flush()
                 while True:
                     k = _read_key(0.1)
@@ -120,6 +136,7 @@ def run_timer(seconds, label):
                 total += 300
                 added_sec += 300
                 sys.stdout.write("\n+5 min added.\n")
+                sys.stdout.write(f"{HINTS}\n")
                 sys.stdout.flush()
 
             else:
@@ -200,8 +217,8 @@ def main():
     state["last_project"] = project
     save_state(state)
 
-    print(f"Starting pomodoro: {project} — {task}")
-    print(f"Work: {opts.work} min  |  Break: {opts.brk} min\n")
+    header = f"► {project} — {task}  [{opts.work}m work / {opts.brk}m break]"
+    print(header[:40])
 
     total_paused = 0
     total_added = 0
