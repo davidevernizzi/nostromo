@@ -26,6 +26,7 @@ Each iteration lives in its own subdirectory:
 docs/iterations/<id>_<short-description>/
   humans.md          ← human-readable description and rationale
   agents.md          ← agent-oriented specification (source of truth for implementors)
+  chat_history.md    ← verbatim user prompts that initiated this iteration
   task001_<short-description>.md
   task002_<short-description>.md
   ...
@@ -63,6 +64,20 @@ One-paragraph summary for the implementing agent.
 ## Edge Cases & Constraints
 ...
 ```
+
+### `chat_history.md`
+
+```markdown
+# Chat History
+
+## Prompt
+> Verbatim user message that initiated this iteration.
+
+## Prompt
+> Any follow-up message that materially shaped the spec (optional).
+```
+
+Each `## Prompt` section is a separate user message, in chronological order. Only include messages that directly influenced the spec — omit implementation feedback or clarifications that didn't change the requirements.
 
 ### `task<n>_<short-description>.md`
 
