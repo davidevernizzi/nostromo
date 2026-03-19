@@ -10,6 +10,26 @@ from pathlib import Path
 
 STATE_FILE = os.path.expanduser("~/.nostromo/state.json")
 
+# Platform-specific keypress reading
+if os.name == "nt":
+    import msvcrt
+
+    def _read_key(_timeout=0.05):
+        if msvcrt.kbhit():
+            return msvcrt.getch().decode("utf-8", errors="ignore")
+        time.sleep(_timeout)
+        return None
+
+else:
+    import select
+    import termios
+    import tty
+
+    def _read_key(timeout=0.05):
+        if select.select([sys.stdin], [], [], timeout)[0]:
+            return sys.stdin.read(1)
+        return None
+
 
 def load_state():
     try:
@@ -26,16 +46,94 @@ def save_state(state):
 
 
 def run_timer(seconds, label):
-    for remaining in range(seconds, 0, -1):
-        mm, ss = divmod(remaining, 60)
-        sys.stdout.write(f"\r{label}: {mm:02d}:{ss:02d} remaining  ")
+    """Run a countdown timer with interactive key controls.
+
+    Returns a dict:
+        {"outcome": "completed"|"cancelled"|"stopped", "elapsed_sec": int, "paused_sec": int, "added_sec": int}
+    """
+    interactive = sys.stdin.isatty() and os.name != "nt" or (os.name == "nt" and sys.stdin.isatty())
+
+    total = seconds
+    elapsed = 0.0
+    paused_sec = 0
+    added_sec = 0
+    tick = 0.05  # seconds per loop iteration
+
+    def _print_status(remaining):
+        mm, ss = divmod(int(remaining), 60)
+        sys.stdout.write(f"\r{label}: {mm:02d}:{ss:02d} remaining  [p]ause  [s]top  [c]ancel  [a]dd 5m  ")
         sys.stdout.flush()
-        time.sleep(1)
-    sys.stdout.write("\n\a")
-    sys.stdout.flush()
+
+    if not interactive:
+        # Non-interactive fallback: original blocking loop
+        for remaining in range(seconds, 0, -1):
+            mm, ss = divmod(remaining, 60)
+            sys.stdout.write(f"\r{label}: {mm:02d}:{ss:02d} remaining  ")
+            sys.stdout.flush()
+            time.sleep(1)
+        sys.stdout.write("\n\a")
+        sys.stdout.flush()
+        return {"outcome": "completed", "elapsed_sec": seconds, "paused_sec": 0, "added_sec": 0}
+
+    # Save and switch to raw terminal mode
+    old_settings = termios.tcgetattr(sys.stdin)
+    try:
+        tty.setraw(sys.stdin)
+
+        while elapsed < total:
+            remaining = total - elapsed
+            _print_status(remaining)
+
+            key = _read_key(tick)
+
+            if key == "p":
+                pause_start = time.monotonic()
+                sys.stdout.write("\nPaused — press p to resume  ")
+                sys.stdout.flush()
+                while True:
+                    k = _read_key(0.1)
+                    if k == "p":
+                        break
+                    if k == "c":
+                        paused_sec += int(time.monotonic() - pause_start)
+                        sys.stdout.write("\nCancelled.\n")
+                        sys.stdout.flush()
+                        return {"outcome": "cancelled", "elapsed_sec": int(elapsed), "paused_sec": paused_sec, "added_sec": added_sec}
+                    if k == "s":
+                        paused_sec += int(time.monotonic() - pause_start)
+                        sys.stdout.write("\nStopped early.\n")
+                        sys.stdout.flush()
+                        return {"outcome": "stopped", "elapsed_sec": int(elapsed), "paused_sec": paused_sec, "added_sec": added_sec}
+                paused_sec += int(time.monotonic() - pause_start)
+
+            elif key == "c":
+                sys.stdout.write("\nCancelled.\n")
+                sys.stdout.flush()
+                return {"outcome": "cancelled", "elapsed_sec": int(elapsed), "paused_sec": paused_sec, "added_sec": added_sec}
+
+            elif key == "s":
+                sys.stdout.write("\nStopped early.\n")
+                sys.stdout.flush()
+                return {"outcome": "stopped", "elapsed_sec": int(elapsed), "paused_sec": paused_sec, "added_sec": added_sec}
+
+            elif key == "a":
+                total += 300
+                added_sec += 300
+                sys.stdout.write("\n+5 min added.\n")
+                sys.stdout.flush()
+
+            else:
+                elapsed += tick
+
+        sys.stdout.write("\n\a")
+        sys.stdout.flush()
+        return {"outcome": "completed", "elapsed_sec": int(elapsed), "paused_sec": paused_sec, "added_sec": added_sec}
+
+    finally:
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
 
-def write_journal(project, task, work_min, break_min):
+def write_journal(project, task, work_min, break_min, paused_sec=0, added_sec=0):
     now = datetime.now()
     entry = (
         f"---\n"
@@ -46,6 +144,11 @@ def write_journal(project, task, work_min, break_min):
         f"work_min: {work_min}\n"
         f"break_min: {break_min}\n"
     )
+    if paused_sec:
+        entry += f"paused_min: {round(paused_sec / 60)}\n"
+    if added_sec:
+        entry += f"added_min: {round(added_sec / 60)}\n"
+
     journal_dir = Path(__file__).parent / "journal"
     by_day = journal_dir / "by-day" / f"{now.strftime('%Y-%m-%d')}.md"
     by_project = journal_dir / "by-project" / f"{project}.md"
@@ -100,11 +203,31 @@ def main():
     print(f"Starting pomodoro: {project} — {task}")
     print(f"Work: {opts.work} min  |  Break: {opts.brk} min\n")
 
-    run_timer(opts.work * 60, "Work")
+    total_paused = 0
+    total_added = 0
+
+    work_result = run_timer(opts.work * 60, "Work")
+    total_paused += work_result["paused_sec"]
+    total_added += work_result["added_sec"]
+    work_min_actual = max(1, round(work_result["elapsed_sec"] / 60))
+
+    if work_result["outcome"] == "cancelled":
+        return
+    if work_result["outcome"] == "stopped":
+        write_journal(project, task, work_min_actual, 0, total_paused, total_added)
+        return
+
     print("Work done! Break time.")
 
-    run_timer(opts.brk * 60, "Break")
-    write_journal(project, task, opts.work, opts.brk)
+    break_result = run_timer(opts.brk * 60, "Break")
+    total_paused += break_result["paused_sec"]
+    total_added += break_result["added_sec"]
+    break_min_actual = max(1, round(break_result["elapsed_sec"] / 60))
+
+    if break_result["outcome"] == "cancelled":
+        return
+
+    write_journal(project, task, work_min_actual, break_min_actual, total_paused, total_added)
     print("Break over. Well done!")
 
 
