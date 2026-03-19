@@ -41,8 +41,8 @@ Projects: my-app, other-project  (or "all" if no filter)
 
 == Per-Project Totals ==
 
-  my-app            1h 45m
-  other-project       30m
+  my-app         [████████████████░░░░]  1h 45m
+  other-project  [████░░░░░░░░░░░░░░░░]    30m
 
 == Daily Breakdown ==
 
@@ -58,19 +58,24 @@ Projects: my-app, other-project  (or "all" if no filter)
 
 == Tasks ==
 
-  2026-03-17  my-app           implement login page      25m
-  2026-03-17  my-app           write unit tests           25m
-  2026-03-17  other-project    fix deployment script      30m
-  2026-03-18  my-app           refactor auth module       30m
-  2026-03-19  my-app           review PR comments         25m
+  my-app
+    2026-03-17  implement login page      25m
+    2026-03-17  write unit tests          25m
+    2026-03-18  refactor auth module      30m
+    2026-03-19  review PR comments        25m
+
+  other-project
+    2026-03-17  fix deployment script     30m
 ```
 
 Rules:
 - If the interval is a single day, omit the "Daily Breakdown" section.
 - Times are shown in `Xh Ym` format (omit hours if zero, omit minutes if zero).
 - Sections are separated by a blank line.
-- Projects are sorted alphabetically. Tasks are sorted chronologically.
+- Projects are sorted alphabetically. Tasks are sorted chronologically within each project.
 - Column alignment uses fixed-width spacing; no box-drawing characters.
+- Progress bars use `█` for filled and `░` for empty, fixed width of 20 chars, scaled to the project with the most time.
+- Tasks are grouped by project (alphabetical), not listed in a flat chronological list.
 
 ## Data Models
 

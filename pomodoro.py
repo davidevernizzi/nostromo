@@ -337,7 +337,17 @@ def _fmt_duration(minutes):
     return f"{m}m"
 
 
+BAR_WIDTH = 20
+
+
+def _progress_bar(value, maximum):
+    filled = round(value / maximum * BAR_WIDTH) if maximum else 0
+    return "[" + "█" * filled + "░" * (BAR_WIDTH - filled) + "]"
+
+
 def render_report(entries, start_date, end_date, projects_filter):
+    from collections import defaultdict
+
     if not entries:
         print("No entries found for the given period.")
         return
@@ -354,15 +364,17 @@ def render_report(entries, start_date, end_date, projects_filter):
     for e in entries:
         totals[e.project] = totals.get(e.project, 0) + e.work_min
 
-    print("\n== Per-Project Totals ==\n")
     proj_col = max((len(p) for p in totals), default=10) + 2
+    max_minutes = max(totals.values())
+
+    print("\n== Per-Project Totals ==\n")
     for proj in sorted(totals):
+        bar = _progress_bar(totals[proj], max_minutes)
         dur = _fmt_duration(totals[proj])
-        print(f"  {proj:<{proj_col}}{dur}")
+        print(f"  {proj:<{proj_col}}{bar}  {dur}")
 
     # Daily breakdown (multi-day only)
     if multi_day:
-        from collections import defaultdict
         daily = defaultdict(lambda: defaultdict(int))
         for e in entries:
             daily[e.date][e.project] += e.work_min
@@ -374,16 +386,19 @@ def render_report(entries, start_date, end_date, projects_filter):
                 dur = _fmt_duration(daily[day][proj])
                 print(f"    {proj:<{proj_col}}{dur}")
 
-    # Tasks list
-    print("\n== Tasks ==\n")
-    date_col = 10
-    task_col = 30
+    # Tasks grouped by project
+    by_project = defaultdict(list)
     for e in entries:
-        dur = _fmt_duration(e.work_min)
-        proj_part = f"{e.project:<{proj_col}}"
-        task_part = f"{e.task:<{task_col}}"
-        line = f"  {e.date}  {proj_part}{task_part}{dur}"
-        print(line[:80])
+        by_project[e.project].append(e)
+
+    task_col = 30
+    print("\n== Tasks ==\n")
+    for proj in sorted(by_project):
+        print(f"  {proj}")
+        for e in sorted(by_project[proj], key=lambda x: (x.date, x.time)):
+            dur = _fmt_duration(e.work_min)
+            line = f"    {e.date}  {e.task:<{task_col}}{dur}"
+            print(line[:80])
 
 
 def run_report(argv):

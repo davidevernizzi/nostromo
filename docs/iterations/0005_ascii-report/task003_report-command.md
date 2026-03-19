@@ -36,10 +36,10 @@ Projects: name1, name2  (or "all")
 ```
 == Per-Project Totals ==
 
-  my-app            1h 45m
-  other-project       30m
+  my-app         [████████████████░░░░]  1h 45m
+  other-project  [████░░░░░░░░░░░░░░░░]    30m
 ```
-Projects sorted alphabetically. Time formatted as `Xh Ym` (omit hours if 0, omit minutes if 0; minimum display is `0m`).
+Projects sorted alphabetically. Time formatted as `Xh Ym` (omit hours if 0, omit minutes if 0; minimum display is `0m`). Progress bar is 20 chars wide, filled proportionally to the project with the most time (`█` filled, `░` empty).
 
 **Daily Breakdown** (omitted if the range is a single day):
 ```
@@ -54,9 +54,13 @@ Days sorted chronologically, projects sorted alphabetically within each day.
 ```
 == Tasks ==
 
-  YYYY-MM-DD  project-name      task description       25m
+  my-app
+    YYYY-MM-DD  task description          Xh Ym
+
+  other-project
+    YYYY-MM-DD  task description          Xh Ym
 ```
-Sorted chronologically (date, then time). Columns are left-aligned with fixed padding.
+Grouped by project (alphabetical). Within each project, tasks are sorted chronologically (date, then time). Columns are left-aligned with fixed padding.
 
 ### Edge cases
 - No entries found: print `No entries found for the given period.` and exit 0.
@@ -72,7 +76,8 @@ Sorted chronologically (date, then time). Columns are left-aligned with fixed pa
 - [ ] `--project my-app,other` filters to multiple projects
 - [ ] Per-project totals are correct and sorted alphabetically
 - [ ] Daily breakdown appears only for multi-day ranges
-- [ ] Tasks section lists all individual entries chronologically
+- [ ] Tasks section groups entries by project (alphabetical), tasks sorted chronologically within each group
+- [ ] Per-project totals show an ASCII progress bar (`█`/`░`, 20 chars wide) scaled to the largest project
 - [ ] Time formatting follows `Xh Ym` rules (no "0h", no "0m" when hours present, shows "0m" for zero)
 - [ ] Output fits within 80 columns
 - [ ] Existing timer functionality (`pomodoro.py <project> <task>`) is not broken
