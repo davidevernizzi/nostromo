@@ -43,6 +43,29 @@ cp pomodoro.py /usr/local/bin/pomodoro
 pomodoro "my-app" "write tests"
 ```
 
+## Report
+
+Generate a report of time spent:
+
+```
+python3 pomodoro.py report [interval] [--from DATE] [--to DATE] [--project LIST]
+```
+
+Predefined intervals: `today` (default), `yesterday`, `this-week`, `last-week`, `this-month`, `last-month`.
+
+```bash
+# Today's sessions
+python3 pomodoro.py report
+
+# This week, filtered to one project
+python3 pomodoro.py report this-week --project my-app
+
+# Custom date range, multiple projects
+python3 pomodoro.py report --from 2026-03-01 --to 2026-03-15 --project my-app,other-project
+```
+
+Output includes per-project totals, a daily breakdown (for multi-day ranges), and a full task list.
+
 ## State
 
 Last used project is stored in `~/.nostromo/state.json`.
